@@ -1,0 +1,2341 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>FLOW×SKY Project</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Exo+2:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { 
+            width: 100%; height: 100%; 
+            background-color: #07080a; color: #ffffff; 
+            overflow: hidden; 
+            font-family: 'Exo 2', 'Orbitron', sans-serif;
+        }
+
+        #app-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #111 0%, #07080a 100%);
+            display: flex; flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        /* ================= SPLASH ================= */
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; display: none; justify-content: center; align-items: center;
+            transition: opacity 0.5s ease;
+        }
+        #splash-screen.show { display: flex; }
+        #splash-screen video { width: 100%; height: 100%; object-fit: cover; }
+        .btn-skip {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(0,0,0,0.6); color: #fff; border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer;
+            z-index: 10000; backdrop-filter: blur(5px); font-family: 'Orbitron', sans-serif;
+        }
+        .btn-skip:active { background: rgba(230, 57, 70, 0.8); }
+
+        /* ================= FINGERPRINT ================= */
+        #verification-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 10; transition: opacity 0.5s ease, transform 0.5s ease;
+            padding: 20px; padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        .fingerprint-container {
+            position: relative; width: 180px; height: 180px; display: flex; justify-content: center; align-items: center;
+            margin-bottom: 40px; cursor: pointer; border-radius: 50%; user-select: none; -webkit-user-select: none; touch-action: none;
+        }
+        .progress-ring { position: absolute; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; }
+        .progress-ring circle { fill: none; stroke-width: 4; stroke-linecap: round; }
+        .progress-ring .bg { stroke: rgba(255, 255, 255, 0.05); }
+        .progress-ring .progress {
+            stroke: #d4af37; stroke-dasharray: 565; stroke-dashoffset: 565;
+            transition: stroke-dashoffset 0.05s linear; filter: drop-shadow(0 0 8px #d4af37);
+        }
+        .fingerprint-icon {
+            font-size: 65px; color: #d4af37; text-shadow: 0 0 20px rgba(212, 175, 55, 0.6);
+            z-index: 2; transition: 0.3s;
+        }
+        .fingerprint-container:active .fingerprint-icon { transform: scale(0.9); text-shadow: 0 0 40px rgba(212, 175, 55, 1); }
+
+        .pre-login-logo-box {
+            width: 100px; height: 100px; border-radius: 20px; overflow: hidden; margin-bottom: 20px;
+            border: 2px solid rgba(212, 175, 55, 0.3); box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+            background: #0d0e12; display: flex; justify-content: center; align-items: center;
+        }
+        .pre-login-logo-box img { width: 100%; height: 100%; object-fit: cover; }
+
+        .brand-title { 
+            font-family: 'Orbitron', sans-serif;
+            font-size: 26px; font-weight: 800; letter-spacing: 3px; margin-bottom: 10px; text-align: center; 
+        }
+        .brand-title span { color: #d4af37; }
+
+        .badge-outline {
+            border: 1px solid #d4af37; color: #d4af37; padding: 6px 16px; border-radius: 20px;
+            font-size: 10px; letter-spacing: 2px; font-weight: 600; margin-bottom: 20px;
+            text-transform: uppercase; text-align: center; font-family: 'Orbitron', sans-serif;
+        }
+
+        .instruction-text {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #aaa; padding: 10px 20px; border-radius: 30px; font-size: 12px;
+            display: flex; align-items: center; gap: 8px; letter-spacing: 1px; transition: 0.3s;
+        }
+        .instruction-text i { color: #d4af37; }
+        .instruction-text.holding { border-color: #d4af37; color: #d4af37; background: rgba(212, 175, 55, 0.1); }
+        .instruction-text.success { border-color: #00e676; color: #00e676; background: rgba(0, 230, 118, 0.1); }
+        .instruction-text.success i { color: #00e676; }
+        .instruction-text.fail { border-color: #e63946; color: #e63946; background: rgba(230, 57, 70, 0.1); }
+        .instruction-text.fail i { color: #e63946; }
+
+        /* ================= SLIDER ================= */
+        #slider-container {
+            width: 100%; height: 100%; position: absolute; top: 0; left: 0;
+            display: none; opacity: 0; transition: opacity 0.5s ease;
+            flex-direction: column; overflow: hidden;
+        }
+        #slider-container.show { display: flex; }
+
+        .slide-wrapper { display: flex; width: 400%; height: 100%; transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+        .slide { width: 25%; height: 100%; display: flex; justify-content: center; align-items: center; padding: 15px; padding-bottom: 90px; }
+
+        .card {
+            width: 100%; max-width: 420px; background: #0d0e12; border-radius: 20px; overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(255,255,255,0.05);
+            display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.05); position: relative;
+        }
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center; padding: 12px 20px;
+            background-color: #e63946; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .slide[data-index="1"] .card-header { background-color: #e63946; color: white; }
+        .slide[data-index="2"] .card-header { background-color: #f4a261; color: #000; }
+        .slide[data-index="3"] .card-header { background-color: #e9c46a; color: #000; }
+        .slide[data-index="4"] .card-header { background-color: #00b4d8; color: #000; }
+
+        .card-header .page-indicator { display: flex; align-items: center; gap: 6px; }
+        .card-header .page-indicator .dot { width: 6px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; }
+        .card-header .page-indicator .dot.active { background: #fff; }
+        .slide[data-index="2"] .dot.active, .slide[data-index="3"] .dot.active, .slide[data-index="4"] .dot.active { background: #000; }
+
+        .card-body {
+            padding: 30px 25px 20px 25px; display: flex; flex-direction: column; align-items: center;
+            text-align: center; position: relative; flex-grow: 1;
+        }
+        .card-body::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.05) 0%, transparent 60%); pointer-events: none;
+        }
+        .card-icon {
+            width: 80px; height: 80px; border-radius: 20px; object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.1); margin-bottom: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .card-title { 
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px; font-weight: 800; letter-spacing: 2px; margin-bottom: 15px; text-transform: uppercase; 
+        }
+        .card-divider { width: 40px; height: 3px; background: #e63946; border-radius: 2px; margin-bottom: 20px; }
+        .slide[data-index="2"] .card-divider { background: #f4a261; }
+        .slide[data-index="3"] .card-divider { background: #e9c46a; }
+        .slide[data-index="4"] .card-divider { background: #00b4d8; }
+        .card-description { font-size: 13px; line-height: 1.6; color: #a0a0a0; margin-bottom: 20px; }
+
+        .card-dots { display: flex; justify-content: center; gap: 8px; margin-top: auto; padding-top: 15px; width: 100%; border-top: 1px solid rgba(255,255,255,0.05); }
+        .card-dots span { width: 8px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 50%; transition: 0.3s; }
+        .card-dots span.active { width: 24px; border-radius: 10px; }
+        .slide[data-index="1"] .card-dots span.active { background: #e63946; }
+        .slide[data-index="2"] .card-dots span.active { background: #f4a261; }
+        .slide[data-index="3"] .card-dots span.active { background: #e9c46a; }
+        .slide[data-index="4"] .card-dots span.active { background: #00b4d8; }
+
+        .slider-footer {
+            position: absolute; bottom: 0; left: 0; width: 100%; display: flex; justify-content: space-between;
+            align-items: center; padding: 15px 25px; padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
+            z-index: 20; background: linear-gradient(to top, #07080a 80%, transparent); pointer-events: none;
+        }
+        .pagination-dots { display: flex; gap: 8px; pointer-events: auto; }
+        .pagination-dots span { width: 8px; height: 8px; background: rgba(255,255,255,0.2); border-radius: 50%; transition: 0.3s; }
+        .pagination-dots span.active { width: 24px; border-radius: 10px; }
+        .pagination-dots span.active[data-color="merah"] { background: #e63946; }
+        .pagination-dots span.active[data-color="oranye"] { background: #f4a261; }
+        .pagination-dots span.active[data-color="kuning"] { background: #e9c46a; }
+        .pagination-dots span.active[data-color="biru"] { background: #00b4d8; }
+
+        .btn-next {
+            background: #e63946; color: #fff; border: none; padding: 12px 24px; border-radius: 30px;
+            font-size: 11px; font-weight: 700; letter-spacing: 1px; display: flex; align-items: center;
+            gap: 8px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(230, 57, 70, 0.4); pointer-events: auto;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .btn-next:active { transform: scale(0.95); }
+        .btn-next[data-theme="merah"] { background: #e63946; box-shadow: 0 4px 15px rgba(230, 57, 70, 0.4); }
+        .btn-next[data-theme="oranye"] { background: #f4a261; color: #000; box-shadow: 0 4px 15px rgba(244, 162, 97, 0.4); }
+        .btn-next[data-theme="kuning"] { background: #e9c46a; color: #000; box-shadow: 0 4px 15px rgba(233, 196, 106, 0.4); }
+        .btn-next[data-theme="biru"] { background: #00b4d8; color: #000; box-shadow: 0 4px 15px rgba(0, 180, 216, 0.4); }
+
+        .fade-out { opacity: 0 !important; transform: scale(1.1); pointer-events: none; }
+        .fade-in { opacity: 1 !important; }
+
+        /* ================= LOGIN & REGISTER ================= */
+        #login-screen, #register-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 30; padding: 25px; padding-bottom: calc(25px + env(safe-area-inset-bottom, 0px));
+            background: radial-gradient(circle at top, #1a1a20 0%, #07080a 70%);
+            opacity: 0; transition: opacity 0.5s ease; overflow-y: auto;
+        }
+        #login-screen.show, #register-screen.show { display: flex; opacity: 1; }
+
+        .login-logo {
+            width: 90px; height: 90px; border-radius: 22px; overflow: hidden; margin-bottom: 15px;
+            border: 2px solid rgba(212, 175, 55, 0.4); box-shadow: 0 0 25px rgba(212, 175, 55, 0.3);
+            animation: floatLogo 3s ease-in-out infinite;
+        }
+        .login-logo img { width: 100%; height: 100%; object-fit: cover; }
+        @keyframes floatLogo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+        .login-title { 
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px; font-weight: 800; letter-spacing: 3px; margin-bottom: 5px; text-align: center; 
+        }
+        .login-title span { color: #d4af37; }
+        .login-subtitle { font-size: 11px; color: #888; letter-spacing: 2px; margin-bottom: 30px; text-transform: uppercase; text-align: center; }
+
+        .login-form { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 15px; }
+
+        .input-group {
+            position: relative; display: flex; align-items: center;
+            background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px; padding: 0 16px; transition: 0.3s;
+        }
+        .input-group:focus-within { border-color: #d4af37; background: rgba(212, 175, 55, 0.05); box-shadow: 0 0 15px rgba(212, 175, 55, 0.15); }
+        .input-group i.field-icon { color: #666; font-size: 14px; margin-right: 12px; transition: 0.3s; }
+        .input-group:focus-within i.field-icon { color: #d4af37; }
+        .input-group input {
+            flex: 1; background: transparent; border: none; outline: none; color: #fff;
+            font-size: 14px; padding: 16px 0; letter-spacing: 0.5px; font-family: 'Exo 2', sans-serif;
+        }
+        .input-group input::placeholder { color: #555; font-size: 13px; letter-spacing: 0.5px; }
+
+        .toggle-password { background: transparent; border: none; color: #666; font-size: 14px; cursor: pointer; padding: 5px; transition: 0.3s; }
+        .toggle-password:hover { color: #d4af37; }
+
+        .login-options { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #888; margin-top: 5px; padding: 0 4px; }
+        .login-options label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .login-options input[type="checkbox"] { accent-color: #d4af37; width: 14px; height: 14px; cursor: pointer; }
+        .login-options a { color: #d4af37; text-decoration: none; font-weight: 600; transition: 0.3s; }
+        .login-options a:hover { text-shadow: 0 0 8px #d4af37; }
+
+        .btn-signin {
+            margin-top: 10px; background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%);
+            color: #07080a; border: none; padding: 16px; border-radius: 14px; font-size: 12px;
+            font-weight: 800; letter-spacing: 2px; cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3); font-family: 'Orbitron', sans-serif;
+        }
+        .btn-signin:active { transform: scale(0.97); }
+        .btn-signin:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+        .btn-signin .spinner {
+            display: none; width: 16px; height: 16px; border: 2px solid rgba(7, 8, 10, 0.3);
+            border-top-color: #07080a; border-radius: 50%; animation: spin 0.7s linear infinite;
+        }
+        .btn-signin.loading .spinner { display: block; }
+        .btn-signin.loading .btn-text { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .login-divider { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 380px; margin: 22px 0; color: #444; font-size: 10px; letter-spacing: 2px; font-family: 'Orbitron', sans-serif; }
+        .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255, 255, 255, 0.08); }
+
+        .login-footer-text { font-size: 12px; color: #666; text-align: center; }
+        .login-footer-text a { color: #d4af37; text-decoration: none; font-weight: 700; margin-left: 4px; cursor: pointer; }
+        .login-footer-text a:hover { text-shadow: 0 0 8px #d4af37; }
+
+        .btn-back-slide {
+            position: absolute; top: 20px; left: 20px; background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1); color: #aaa; width: 40px; height: 40px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.3s; z-index: 5;
+        }
+        .btn-back-slide:hover { border-color: #d4af37; color: #d4af37; }
+
+        /* ================= DASHBOARD ================= */
+        #dashboard-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; overflow-y: auto; overflow-x: hidden;
+            background: #0d0d0d; padding-bottom: 80px; scrollbar-width: none;
+        }
+        #dashboard-screen.show { display: flex; }
+        #dashboard-screen::-webkit-scrollbar { display: none; }
+
+        .top-header {
+            display: flex; justify-content: space-between; align-items: center; padding: 12px 15px;
+            background: #e63946; position: sticky; top: 0; z-index: 50;
+        }
+        .menu-btn {
+            width: 38px; height: 38px; border-radius: 50%; background: #fff; color: #e63946;
+            display: flex; justify-content: center; align-items: center; font-size: 16px; cursor: pointer; border: none;
+        }
+        .music-player {
+            display: flex; align-items: center; gap: 8px; background: #1a1a1a; padding: 6px 12px;
+            border-radius: 30px; border: 1px solid #d4af37; flex: 1; max-width: 200px; margin: 0 10px;
+        }
+        .music-player img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+        .music-player .music-info { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+        .music-player .music-info span:first-child { font-size: 9px; font-weight: 700; color: #fff; white-space: nowrap; font-family: 'Orbitron', sans-serif; }
+        .music-player .music-info span:last-child { font-size: 8px; color: #d4af37; }
+        .music-player .play-btn { color: #d4af37; font-size: 14px; cursor: pointer; }
+        .header-actions { display: flex; gap: 8px; }
+        .header-actions .icon-btn {
+            width: 38px; height: 38px; border-radius: 50%; background: #1a1a1a; color: #fff;
+            display: flex; justify-content: center; align-items: center; font-size: 14px;
+            cursor: pointer; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .header-actions .icon-btn img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+
+        .banner-top { padding: 15px; display: flex; justify-content: center; }
+        .banner-top .banner-box {
+            width: 100%; height: 150px; border-radius: 15px; overflow: hidden;
+            background: #1a1a1a; border: 1px solid rgba(255,255,255,0.05);
+            display: flex; justify-content: center; align-items: center;
+        }
+        .banner-top .banner-box img { width: 100%; height: 100%; object-fit: cover; }
+
+        .title-section { text-align: center; padding: 0 15px 10px 15px; }
+        .title-section .title-box {
+            display: inline-block; background: #1a1a1a; padding: 6px 20px; border-radius: 20px;
+            border: 1px solid #d4af37; font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #d4af37;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .profile-card {
+            margin: 0 15px 15px 15px; background: #1a1a1a; border-radius: 20px; padding: 15px;
+            border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 12px;
+        }
+        .profile-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .profile-info { display: flex; align-items: center; gap: 12px; flex: 1; }
+        .profile-avatar {
+            position: relative; width: 55px; height: 55px; border-radius: 50%; background: #333;
+            display: flex; justify-content: center; align-items: center; font-size: 24px; color: #888;
+            border: 2px solid #d4af37; overflow: hidden; cursor: pointer;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-avatar .cam-icon {
+            position: absolute; bottom: -2px; right: -2px; width: 20px; height: 20px;
+            background: #d4af37; border-radius: 50%; display: flex; justify-content: center;
+            align-items: center; font-size: 10px; color: #000; border: 2px solid #1a1a1a;
+        }
+        .profile-details { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+        .profile-details .greeting { font-size: 11px; color: #888; }
+        .profile-details .email {
+            font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; max-width: 160px; display: flex; align-items: center; gap: 5px;
+        }
+        .profile-details .email i { color: #00b4d8; font-size: 12px; }
+        .member-badge {
+            display: inline-flex; align-items: center; gap: 5px; background: #d4af37; color: #000;
+            padding: 3px 10px; border-radius: 10px; font-size: 9px; font-weight: 800;
+            width: fit-content; margin-top: 4px; font-family: 'Orbitron', sans-serif;
+        }
+        .weather-clock { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+        .weather-badge {
+            display: flex; align-items: center; gap: 5px; background: #fff; color: #000;
+            padding: 4px 10px; border-radius: 15px; font-size: 10px; font-weight: 700;
+        }
+        .clock-badge {
+            width: 50px; height: 50px; border-radius: 50%; border: 3px solid #d4af37;
+            display: flex; justify-content: center; align-items: center; position: relative; background: #111;
+        }
+        .clock-badge .clock-hands { position: absolute; width: 100%; height: 100%; border-radius: 50%; }
+        .clock-badge .clock-hands::before {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 2px; height: 15px;
+            background: #d4af37; transform-origin: bottom center; transform: translate(-50%, -100%) rotate(45deg);
+        }
+        .clock-badge .clock-hands::after {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 2px; height: 20px;
+            background: #fff; transform-origin: bottom center; transform: translate(-50%, -100%) rotate(160deg);
+        }
+        .wib-badges { display: flex; gap: 5px; }
+        .wib-badges span {
+            background: #333; color: #d4af37; padding: 2px 8px; border-radius: 8px; font-size: 8px;
+            font-weight: 700; border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .status-item {
+            background: #111; border-radius: 12px; padding: 10px; display: flex; align-items: center;
+            gap: 10px; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .status-item .icon-box { width: 35px; height: 35px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 16px; color: #fff; }
+        .status-item .icon-box.green { background: #00e676; color: #000; }
+        .status-item .icon-box.blue { background: #00b4d8; color: #000; }
+        .status-item .icon-box.red { background: #e63946; color: #fff; }
+        .status-item .text-box { display: flex; flex-direction: column; gap: 2px; }
+        .status-item .text-box span:first-child { font-size: 9px; color: #888; font-weight: 700; font-family: 'Orbitron', sans-serif; }
+        .status-item .text-box span:last-child { font-size: 11px; color: #fff; font-weight: 600; }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .stat-card {
+            background: #fff; color: #000; border-radius: 15px; padding: 12px 8px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+        }
+        .stat-card .stat-icon { font-size: 18px; }
+        .stat-card .stat-value { font-size: 16px; font-weight: 800; font-family: 'Orbitron', sans-serif; }
+        .stat-card .stat-label { font-size: 8px; font-weight: 700; color: #555; text-transform: uppercase; font-family: 'Orbitron', sans-serif; }
+        .stat-card .stat-badge { font-size: 8px; font-weight: 700; padding: 2px 8px; border-radius: 8px; color: #000; }
+        .stat-card .stat-badge.green { background: #00e676; }
+        .stat-card .stat-badge.yellow { background: #d4af37; }
+
+        .quick-actions-header { display: flex; justify-content: space-between; align-items: center; margin: 20px 15px 10px 15px; }
+        .quick-actions-header .qa-title {
+            display: flex; align-items: center; gap: 5px; background: #d4af37; color: #000;
+            padding: 5px 12px; border-radius: 15px; font-size: 10px; font-weight: 800;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .quick-actions-header .view-toggle { display: flex; background: #1a1a1a; border-radius: 15px; padding: 3px; border: 1px solid rgba(255,255,255,0.1); }
+        .quick-actions-header .view-toggle span { padding: 4px 12px; border-radius: 12px; font-size: 9px; font-weight: 700; color: #888; cursor: pointer; font-family: 'Orbitron', sans-serif; }
+        .quick-actions-header .view-toggle span.active { background: #d4af37; color: #000; }
+
+        .qa-slider-wrapper {
+            display: flex; overflow-x: auto; gap: 15px; 
+            padding: 10px 15px 20px 15px;
+            scroll-snap-type: x mandatory; scrollbar-width: none;
+            min-height: 200px;
+        }
+        .qa-slider-wrapper::-webkit-scrollbar { display: none; }
+        .qa-card {
+            flex: 0 0 auto;
+            width: 270px;
+            height: 190px;
+            background: #1a1a1a; 
+            border-radius: 20px; 
+            padding: 20px;
+            scroll-snap-align: center; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between;
+            border: 1px solid rgba(255,255,255,0.05); 
+            position: relative; 
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .qa-card .qa-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .qa-card .qa-icon { width: 45px; height: 45px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 20px; color: #fff; flex-shrink: 0; }
+        .qa-card .qa-icon.pink { background: #e63946; }
+        .qa-card .qa-icon.yellow { background: #d4af37; color: #000; }
+        .qa-card .qa-icon.orange { background: #f4a261; color: #000; }
+        .qa-card .qa-icon.dark { background: #333; }
+        .qa-card .qa-icon.cyan { background: #00b4d8; color: #000; }
+        .qa-card .qa-icon.red { background: #e63946; }
+        .qa-card .qa-icon.purple { background: #9c27b0; }
+        .qa-card .action-badge { background: #e63946; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 8px; font-weight: 700; font-family: 'Orbitron', sans-serif; white-space: nowrap; }
+        .qa-card .action-badge.yellow { background: #d4af37; color: #000; }
+        .qa-card .action-badge.orange { background: #f4a261; color: #000; }
+        .qa-card .action-badge.dark { background: #333; color: #fff; }
+        .qa-card .action-badge.cyan { background: #00b4d8; color: #000; }
+        .qa-card .action-badge.red { background: #e63946; color: #fff; }
+        .qa-card .action-badge.purple { background: #9c27b0; color: #fff; }
+        .qa-card .qa-content { flex: 1; display: flex; flex-direction: column; justify-content: center; padding-right: 50px; }
+        .qa-card .qa-content h3 { font-size: 15px; font-weight: 800; margin-bottom: 5px; font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+        .qa-card .qa-content p { font-size: 10px; color: #888; line-height: 1.4; }
+        .qa-card .qa-arrow {
+            position: absolute; bottom: 20px; right: 20px; width: 35px; height: 35px; border-radius: 50%;
+            background: #333; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 14px;
+        }
+
+        .slider-dots { display: flex; justify-content: center; gap: 5px; margin: 0 0 25px 0; }
+        .slider-dots span { width: 6px; height: 6px; background: #333; border-radius: 50%; transition: 0.3s; }
+        .slider-dots span.active { width: 20px; border-radius: 5px; background: #d4af37; }
+
+        .prayer-card { 
+            margin: 25px 15px 20px 15px;
+            background: #111; 
+            border-radius: 20px; 
+            padding: 15px; 
+            border: 1px solid rgba(255,255,255,0.05); 
+        }
+        .prayer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .prayer-header .title { display: flex; align-items: center; gap: 5px; background: #d4af37; color: #000; padding: 5px 12px; border-radius: 12px; font-size: 10px; font-weight: 800; font-family: 'Orbitron', sans-serif; }
+        .prayer-header .next-info { font-size: 10px; color: #d4af37; font-weight: 600; }
+        .prayer-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .prayer-item {
+            background: #1a1a1a; border-radius: 12px; padding: 10px 5px; display: flex; flex-direction: column;
+            align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .prayer-item.active { background: #d4af37; color: #000; border-color: #d4af37; }
+        .prayer-item .p-icon { font-size: 14px; }
+        .prayer-item .p-name { font-size: 8px; font-weight: 700; font-family: 'Orbitron', sans-serif; }
+        .prayer-item .p-time { font-size: 10px; font-weight: 800; }
+
+        /* ========== LATEST NEWS ========== */
+        .news-header { display: flex; justify-content: space-between; align-items: center; margin: 0 15px 10px 15px; }
+        .news-header .title { display: flex; align-items: center; gap: 5px; background: #1a1a1a; color: #fff; padding: 5px 12px; border-radius: 12px; font-size: 10px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); font-family: 'Orbitron', sans-serif; }
+        .news-header .all-btn { background: #e63946; color: #fff; padding: 5px 12px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; font-family: 'Orbitron', sans-serif; }
+        .news-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 15px 20px 15px; }
+        .news-card { background: #1a1a1a; border-radius: 12px; overflow: hidden; height: 120px; position: relative; }
+        .news-card img { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; }
+        .news-card .news-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%; padding: 10px;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); font-size: 10px; font-weight: 700;
+        }
+
+        /* ============ FLOW×SKY GORE CREW CARD ============ */
+        .crew-card {
+            margin: 0 15px 25px 15px;
+            background: #0d0b1a;
+            border: 2px solid #d4af37;
+            border-radius: 20px;
+            padding: 15px;
+            position: relative;
+        }
+        .crew-header {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #1a1a2e;
+            border: 1px solid #d4af37;
+            padding: 6px 14px;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #d4af37;
+        }
+        .crew-header i { color: #d4af37; font-size: 12px; }
+        .crew-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+        .crew-item {
+            background: #1a1a2e;
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 15px;
+            padding: 15px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+            transition: 0.3s;
+            text-decoration: none;
+        }
+        .crew-item:active { transform: scale(0.95); border-color: #d4af37; }
+        .crew-icon {
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: #fff;
+        }
+        .crew-icon.pink { background: #e63946; }
+        .crew-icon.yellow { background: #d4af37; color: #000; }
+        .crew-icon.red { background: #e63946; }
+        .crew-name { font-family: 'Exo 2', sans-serif; font-size: 13px; font-weight: 700; color: #fff; }
+        .crew-username { font-size: 10px; color: #888; font-weight: 500; }
+        .crew-badge {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 8px; font-weight: 800; letter-spacing: 1px;
+            padding: 3px 10px; border-radius: 10px; border: 1px solid;
+        }
+        .crew-badge.lead { color: #e63946; border-color: #e63946; background: rgba(230, 57, 70, 0.1); }
+        .crew-badge.founder { color: #d4af37; border-color: #d4af37; background: rgba(212, 175, 55, 0.1); }
+        .crew-badge.media { color: #e63946; border-color: #e63946; background: rgba(230, 57, 70, 0.1); }
+
+        /* ============ BOTTOM NAV ============ */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%; background: #111; display: flex;
+            justify-content: space-around; align-items: center; padding: 10px 0;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+            border-top: 1px solid rgba(255,255,255,0.05); z-index: 100;
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center; gap: 4px; color: #555;
+            font-size: 9px; font-weight: 600; cursor: pointer; flex: 1; transition: 0.3s;
+        }
+        .nav-item i { font-size: 18px; }
+        .nav-item span { font-family: 'Orbitron', sans-serif; font-size: 8px; }
+        .nav-item.active { color: #e63946; }
+        .nav-item.active i { color: #e63946; text-shadow: 0 0 10px rgba(230, 57, 70, 0.5); }
+
+        /* ============ SUB-PAGE ============ */
+        .subpage {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0d0d0d; z-index: 200; display: none;
+            flex-direction: column; overflow: hidden;
+        }
+        .subpage.show { display: flex; }
+        .subpage-header {
+            display: flex; align-items: center; gap: 15px;
+            padding: 15px; background: #e63946; color: #fff;
+            position: sticky; top: 0; z-index: 10;
+        }
+        .subpage-header .back-btn {
+            background: rgba(0,0,0,0.2); border: none; color: #fff; width: 35px; height: 35px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 16px; cursor: pointer;
+        }
+        .subpage-header .title {
+            font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 800;
+            letter-spacing: 2px; flex: 1;
+        }
+        .subpage-content { flex: 1; overflow-y: auto; padding: 20px; }
+
+        /* ============ TABUNGAN (CELENGAN STYLE) ============ */
+        #tabungan-page .subpage-header {
+            background: #0d0d0d; border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .celengan-title {
+            font-size: 28px; font-weight: 300; color: #fff; margin-bottom: 20px;
+            padding: 0 20px; letter-spacing: 1px;
+        }
+        .celengan-tabs {
+            display: flex; gap: 30px; padding: 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 20px;
+        }
+        .celengan-tab {
+            padding: 10px 0; font-size: 13px; color: #666; cursor: pointer;
+            border-bottom: 2px solid transparent; transition: 0.3s;
+        }
+        .celengan-tab.active { color: #fff; border-bottom-color: #4169e1; }
+        .celengan-filters {
+            display: flex; gap: 10px; padding: 0 20px; margin-bottom: 20px;
+        }
+        .celengan-filter {
+            background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px; padding: 8px 15px; font-size: 12px; color: #aaa;
+            display: flex; align-items: center; gap: 8px; cursor: pointer;
+        }
+        .celengan-empty {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 15px; color: #666; padding: 40px;
+        }
+        .celengan-empty i { font-size: 50px; color: #4169e1; opacity: 0.5; }
+        .celengan-empty p { font-size: 13px; }
+        .btn-tambah-celengan {
+            position: fixed; bottom: 30px; right: 20px;
+            background: #4169e1; color: #fff; border: none; padding: 15px 25px;
+            border-radius: 30px; font-size: 14px; font-weight: 700;
+            display: flex; align-items: center; gap: 10px; cursor: pointer;
+            box-shadow: 0 5px 20px rgba(65, 105, 225, 0.4);
+            font-family: 'Exo 2', sans-serif;
+        }
+        .btn-tambah-celengan:active { transform: scale(0.95); }
+
+        /* ============ FORM TAMBAH CELENGAN ============ */
+        .celengan-form-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .celengan-form-header .btn-back {
+            background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer;
+        }
+        .celengan-form-header .btn-save {
+            background: #4169e1; color: #fff; border: none; padding: 10px 25px;
+            border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer;
+            font-family: 'Exo 2', sans-serif;
+        }
+        .celengan-form-header .btn-save:active { transform: scale(0.95); }
+        .celengan-form-body {
+            flex: 1; overflow-y: auto; padding: 20px;
+        }
+        .upload-image-box {
+            width: 100%; height: 180px; background: #333; border-radius: 15px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 25px; cursor: pointer; position: relative; overflow: hidden;
+        }
+        .upload-image-box i { font-size: 50px; color: #4169e1; }
+        .upload-image-box img { width: 100%; height: 100%; object-fit: cover; }
+        .upload-image-box input { display: none; }
+
+        .form-row {
+            display: flex; align-items: center; gap: 15px; margin-bottom: 20px;
+        }
+        .form-row .form-icon {
+            width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;
+            color: #4169e1; font-size: 16px; flex-shrink: 0;
+        }
+        .form-row .form-input {
+            flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px; padding: 14px 16px; color: #fff; font-size: 14px;
+            font-family: 'Exo 2', sans-serif; outline: none;
+        }
+        .form-row .form-input:focus { border-color: #4169e1; }
+        .form-row .form-input::placeholder { color: #666; }
+        .form-row select.form-input {
+            background: #0d0d0d; color: #fff; cursor: pointer;
+        }
+        .form-section-title {
+            font-size: 14px; color: #fff; font-weight: 700; margin: 20px 0 15px 0;
+        }
+        .pengisian-tabs {
+            display: flex; background: #1a1a1a; border-radius: 10px; overflow: hidden;
+            margin-bottom: 15px;
+        }
+        .pengisian-tab {
+            flex: 1; padding: 12px; text-align: center; font-size: 12px;
+            color: #888; cursor: pointer; transition: 0.3s;
+        }
+        .pengisian-tab.active {
+            background: #2a2a3e; color: #fff; font-weight: 700;
+        }
+        .nominal-row {
+            display: flex; gap: 10px; align-items: center; margin-bottom: 20px;
+        }
+        .nominal-row input {
+            flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px; padding: 14px 16px; color: #fff; font-size: 14px;
+            font-family: 'Exo 2', sans-serif; outline: none;
+        }
+        .nominal-row button {
+            background: #2a2a3e; border: none; color: #fff; width: 45px; height: 45px;
+            border-radius: 8px; cursor: pointer; font-size: 16px;
+        }
+        .kalkulator-link {
+            text-align: center; margin-bottom: 25px;
+        }
+        .kalkulator-link a {
+            color: #4169e1; font-size: 12px; text-decoration: none; font-weight: 600;
+        }
+        .notif-row {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
+        }
+        .notif-time {
+            font-size: 32px; font-weight: 300; color: #fff;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .notif-time i { font-size: 16px; color: #888; }
+        .toggle-switch {
+            position: relative; width: 50px; height: 28px; background: #333;
+            border-radius: 15px; cursor: pointer; transition: 0.3s;
+        }
+        .toggle-switch.active { background: #4169e1; }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 3px; left: 3px;
+            width: 22px; height: 22px; background: #fff; border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle-switch.active::after { left: 25px; }
+        .hari-container {
+            display: flex; flex-wrap: wrap; gap: 8px;
+        }
+        .hari-btn {
+            background: transparent; border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 15px; padding: 8px 15px; font-size: 11px; color: #888;
+            cursor: pointer; transition: 0.3s; font-family: 'Exo 2', sans-serif;
+        }
+        .hari-btn.active {
+            background: #2a2a3e; color: #fff; border-color: #4169e1;
+        }
+
+        /* ============ CHAT ROOM ============ */
+        #chat-page {
+            background: #0a0a0a;
+        }
+        #chat-page .subpage-header {
+            background: #e63946;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .chat-container {
+            display: flex; flex-direction: column; height: 100%;
+            overflow: hidden;
+        }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 15px; display: flex;
+            flex-direction: column; gap: 12px;
+            -webkit-overflow-scrolling: touch;
+            background: #0a0a0a;
+        }
+        .chat-message {
+            display: flex; gap: 10px; align-items: flex-start;
+            max-width: 85%;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .chat-message.own {
+            align-self: flex-end; flex-direction: row-reverse;
+        }
+        .chat-message .msg-avatar {
+            width: 38px; height: 38px; border-radius: 50%; background: #1a1a1a;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; color: #666; flex-shrink: 0; overflow: hidden;
+            border: 2px solid #d4af37;
+        }
+        .chat-message .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .chat-message .msg-content {
+            background: #1a1a1a; border-radius: 15px; padding: 10px 14px;
+            display: flex; flex-direction: column; gap: 4px;
+            border: 1px solid rgba(255,255,255,0.05);
+            position: relative;
+        }
+        .chat-message.own .msg-content { background: #d4af37; color: #000; }
+        .chat-message.own .msg-content::after {
+            content: ''; position: absolute; right: -8px; top: 10px;
+            border: 8px solid transparent; border-left-color: #d4af37;
+        }
+        .chat-message:not(.own) .msg-content::after {
+            content: ''; position: absolute; left: -8px; top: 10px;
+            border: 8px solid transparent; border-right-color: #1a1a1a;
+        }
+        .chat-message .msg-name {
+            font-size: 10px; font-weight: 700; color: #d4af37;
+            font-family: 'Orbitron', sans-serif; display: flex; align-items: center; gap: 5px;
+        }
+        .chat-message.own .msg-name { color: #000; }
+        .chat-message .msg-name .role-badge {
+            font-size: 7px; padding: 1px 5px; border-radius: 5px; background: #e63946; color: #fff;
+        }
+        .chat-message .msg-text { font-size: 13px; line-height: 1.4; word-break: break-word; }
+        .chat-message.own .msg-text { color: #000; }
+        .chat-message .msg-time { font-size: 9px; color: #666; align-self: flex-end; }
+        .chat-message.own .msg-time { color: #555; }
+        .chat-input-container {
+            display: flex; gap: 10px; padding: 12px 15px; background: #111;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        }
+        .chat-input-container input {
+            flex: 1; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 25px;
+            padding: 12px 18px; color: #fff; font-size: 13px; outline: none;
+            font-family: 'Exo 2', sans-serif;
+        }
+        .chat-input-container input:focus { border-color: #d4af37; }
+        .chat-input-container button {
+            background: #d4af37; color: #000; border: none;
+            width: 45px; height: 45px; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 16px;
+            flex-shrink: 0;
+        }
+        .chat-input-container button:disabled { opacity: 0.5; cursor: not-allowed; background: #666; }
+        .mute-warning {
+            background: #e63946; color: #fff; text-align: center;
+            padding: 8px; font-size: 11px; font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px; display: none;
+        }
+        .mute-warning.show { display: block; }
+
+        /* ============ FLOW ASSISTANT ============ */
+        #assistant-page {
+            background: #0a0a0a;
+        }
+        #assistant-page .subpage-header {
+            background: #9c27b0;
+        }
+        .assistant-messages {
+            flex: 1; overflow-y: auto; padding: 15px; display: flex;
+            flex-direction: column; gap: 12px;
+        }
+        .assistant-msg {
+            max-width: 90%;
+            padding: 12px 16px;
+            border-radius: 15px;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .assistant-msg.user {
+            align-self: flex-end;
+            background: #9c27b0;
+            color: #fff;
+            border-bottom-right-radius: 3px;
+        }
+        .assistant-msg.bot {
+            align-self: flex-start;
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid rgba(156, 39, 176, 0.3);
+            border-bottom-left-radius: 3px;
+        }
+        .assistant-msg.bot pre {
+            background: #0d0d0d;
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            color: #d4af37;
+            position: relative;
+        }
+        .assistant-msg.bot code {
+            font-family: 'Courier New', monospace;
+            color: #d4af37;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(212, 175, 55, 0.2);
+            color: #d4af37;
+            border: 1px solid #d4af37;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 9px;
+            cursor: pointer;
+        }
+        .copy-btn:active { background: #d4af37; color: #000; }
+        .assistant-input-container {
+            display: flex; gap: 10px; padding: 12px 15px; background: #111;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        }
+        .assistant-input-container input {
+            flex: 1; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 25px;
+            padding: 12px 18px; color: #fff; font-size: 13px; outline: none;
+            font-family: 'Exo 2', sans-serif;
+        }
+        .assistant-input-container input:focus { border-color: #9c27b0; }
+        .assistant-input-container button {
+            background: #9c27b0; color: #fff; border: none;
+            width: 45px; height: 45px; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 16px;
+            flex-shrink: 0;
+        }
+        .typing-indicator {
+            display: flex; gap: 4px; align-items: center; padding: 12px 16px;
+            background: #1a1a1a; border-radius: 15px; width: fit-content;
+            border: 1px solid rgba(156, 39, 176, 0.3);
+        }
+        .typing-indicator span {
+            width: 6px; height: 6px; background: #9c27b0; border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+            30% { transform: translateY(-5px); opacity: 1; }
+        }
+
+        /* ============ LOGOUT BUTTON ============ */
+        .logout-btn {
+            position: fixed; bottom: 20px; right: 20px;
+            background: #e63946; color: #fff; border: none;
+            width: 50px; height: 50px; border-radius: 50%;
+            cursor: pointer; font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 5px 20px rgba(230, 57, 70, 0.5);
+            z-index: 90;
+        }
+        .logout-btn:active { transform: scale(0.9); }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div id="app-container">
+
+    <!-- SPLASH -->
+    <div id="splash-screen">
+        <video id="splash-video" playsinline>
+            <source src="https://files.catbox.moe/jkeqba.mp4" type="video/mp4">
+        </video>
+        <button class="btn-skip" id="btn-skip">SKIP <i class="fa-solid fa-forward"></i></button>
+    </div>
+
+    <!-- FINGERPRINT -->
+    <div id="verification-screen">
+        <div class="pre-login-logo-box">
+            <img src="https://files.catbox.moe/h8cnec.jpg" alt="FLOW×SKY Logo">
+        </div>
+        <div class="fingerprint-container" id="fingerprint-btn">
+            <svg class="progress-ring" width="180" height="180">
+                <circle class="bg" cx="90" cy="90" r="85"></circle>
+                <circle class="progress" id="progress-circle" cx="90" cy="90" r="85"></circle>
+            </svg>
+            <i class="fa-solid fa-fingerprint fingerprint-icon"></i>
+        </div>
+        <div class="brand-title">FLOW<span>×</span>SKY</div>
+        <div class="badge-outline">SPIDER COLLABORATION EDITION</div>
+        <div class="instruction-text" id="instruction-text">
+            <i class="fa-solid fa-fingerprint"></i>
+            <span id="instruction-label">TAHAN SIDIK JARI UNTUK VERIFIKASI</span>
+        </div>
+    </div>
+
+    <!-- SLIDER -->
+    <div id="slider-container">
+        <div class="slide-wrapper" id="slide-wrapper">
+            <div class="slide" data-index="1">
+                <div class="card">
+                    <div class="card-header"><div class="page-indicator"><span class="dot active"></span> SLIDE PAGE • 01</div><div>SISTEM UTAMA</div></div>
+                    <div class="card-body">
+                        <img src="https://files.catbox.moe/h8cnec.jpg" alt="FLOW×SKY" class="card-icon">
+                        <h2 class="card-title">FLOW×SKY PROJECT</h2>
+                        <div class="card-divider"></div>
+                        <p class="card-description">Aplikasi utilitas cyber serbaguna generasi baru yang menghadirkan performa tinggi, proteksi keamanan menyeluruh, sistem modular canggih, dan integrasi multi-server tanpa hambatan.</p>
+                        <div class="card-dots"><span class="active"></span><span></span><span></span><span></span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="slide" data-index="2">
+                <div class="card">
+                    <div class="card-header"><div class="page-indicator"><span class="dot active"></span> SLIDE PAGE • 02</div><div>CORE ARCHITECT</div></div>
+                    <div class="card-body">
+                        <img src="https://files.catbox.moe/h8cnec.jpg" alt="Developer" class="card-icon">
+                        <h2 class="card-title">DEVELOPER</h2>
+                        <div class="card-divider"></div>
+                        <p class="card-description">Dirancang dan dikembangkan oleh <strong>Nizam</strong> sebagai Engine Architect yang merancang struktur sistem modular berkecepatan tinggi, latensi rendah, serta stabilitas server responsif.</p>
+                        <div class="card-dots"><span></span><span class="active"></span><span></span><span></span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="slide" data-index="3">
+                <div class="card">
+                    <div class="card-header"><div class="page-indicator"><span class="dot active"></span> SLIDE PAGE • 03</div><div>EXECUTIVE OWNER</div></div>
+                    <div class="card-body">
+                        <img src="https://files.catbox.moe/h8cnec.jpg" alt="Owner" class="card-icon">
+                        <h2 class="card-title">PEMILIK PROJECT</h2>
+                        <div class="card-divider"></div>
+                        <p class="card-description"><strong>Fadli</strong> sebagai Executive Owner dan pencetus visi utama FLOW×SKY Project, memimpin perkembangan ekosistem serta kesinambungan komunitas Spider-Verse yang solid.</p>
+                        <div class="card-dots"><span></span><span></span><span class="active"></span><span></span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="slide" data-index="4">
+                <div class="card">
+                    <div class="card-header"><div class="page-indicator"><span class="dot active"></span> SLIDE PAGE • 04</div><div>DASHBOARD ACCESS</div></div>
+                    <div class="card-body">
+                        <img src="https://files.catbox.moe/h8cnec.jpg" alt="FLOW×SKY" class="card-icon">
+                        <h2 class="card-title">SELAMAT DATANG</h2>
+                        <div class="card-divider"></div>
+                        <p class="card-description">Selamat memasuki Dashboard FLOW×SKY! Seluruh modul eksklusif, fitur otomasi, dan proteksi sistem telah siap untuk Anda operasikan secara maksimal.</p>
+                        <div class="card-dots"><span></span><span></span><span></span><span class="active"></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="slider-footer">
+            <div class="pagination-dots" id="pagination-dots">
+                <span class="active" data-color="merah"></span><span data-color="oranye"></span><span data-color="kuning"></span><span data-color="biru"></span>
+            </div>
+            <button class="btn-next" id="btn-next" data-theme="merah">LANJUTKAN <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-screen">
+        <button class="btn-back-slide" id="btn-back-slide"><i class="fa-solid fa-arrow-left"></i></button>
+        <div class="login-logo"><img src="https://files.catbox.moe/h8cnec.jpg" alt="FLOW×SKY"></div>
+        <div class="login-title">FLOW<span>×</span>SKY</div>
+        <div class="login-subtitle">Secure Access Portal</div>
+        <form class="login-form" id="login-form" autocomplete="off">
+            <div class="input-group"><i class="fa-solid fa-user field-icon"></i><input type="text" id="username" placeholder="Username atau Email" required></div>
+            <div class="input-group">
+                <i class="fa-solid fa-lock field-icon"></i>
+                <input type="password" id="password" placeholder="Password" required>
+                <button type="button" class="toggle-password" id="toggle-password"><i class="fa-solid fa-eye"></i></button>
+            </div>
+            <div class="login-options">
+                <label><input type="checkbox" id="remember"> Ingat Saya</label>
+                <a href="#" id="forgot-link">Lupa Password?</a>
+            </div>
+            <button type="submit" class="btn-signin" id="btn-signin">
+                <div class="spinner"></div>
+                <span class="btn-text">MASUK <i class="fa-solid fa-right-to-bracket"></i></span>
+            </button>
+        </form>
+        <div class="login-divider">ATAU MASUK DENGAN</div>
+        <div class="social-login">
+            <a href="#" class="social-btn"><i class="fa-brands fa-google"></i></a>
+            <a href="#" class="social-btn"><i class="fa-brands fa-telegram"></i></a>
+            <a href="#" class="social-btn"><i class="fa-brands fa-github"></i></a>
+        </div>
+        <div class="login-footer-text">Belum punya akun? <a id="go-register">Daftar Sekarang</a></div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="register-screen">
+        <button class="btn-back-slide" id="btn-back-login"><i class="fa-solid fa-arrow-left"></i></button>
+        <div class="login-logo"><img src="https://files.catbox.moe/h8cnec.jpg" alt="FLOW×SKY"></div>
+        <div class="login-title">FLOW<span>×</span>SKY</div>
+        <div class="login-subtitle">Create New Account</div>
+        <form class="login-form" id="register-form" autocomplete="off">
+            <div class="input-group"><i class="fa-solid fa-user field-icon"></i><input type="text" id="reg-username" placeholder="Username (3-10 huruf)" required maxlength="10" minlength="3"></div>
+            <div class="input-group">
+                <i class="fa-solid fa-lock field-icon"></i>
+                <input type="password" id="reg-password" placeholder="Password (3-10 huruf)" required maxlength="10" minlength="3">
+                <button type="button" class="toggle-password" id="toggle-reg-password"><i class="fa-solid fa-eye"></i></button>
+            </div>
+            <div class="input-group"><i class="fa-solid fa-envelope field-icon"></i><input type="email" id="reg-email" placeholder="Email (opsional)"></div>
+            <button type="submit" class="btn-signin" id="btn-register">
+                <div class="spinner"></div>
+                <span class="btn-text">DAFTAR <i class="fa-solid fa-user-plus"></i></span>
+            </button>
+        </form>
+        <div class="login-footer-text" style="margin-top: 20px;">Sudah punya akun? <a id="go-login">Masuk</a></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard-screen">
+        <div class="top-header">
+            <button class="menu-btn"><i class="fa-solid fa-bars"></i></button>
+            <div class="music-player">
+                <img src="https://files.catbox.moe/h8cnec.jpg" alt="Music">
+                <div class="music-info"><span>DJ FLOW×SKY</span><span>• PLAYING</span></div>
+                <i class="fa-solid fa-pause play-btn"></i>
+            </div>
+            <div class="header-actions">
+                <div class="icon-btn"><i class="fa-solid fa-volume-high"></i></div>
+                <div class="icon-btn"><img src="https://files.catbox.moe/h8cnec.jpg" alt="Profile"></div>
+            </div>
+        </div>
+
+        <div class="banner-top"><div class="banner-box"><img src="https://files.catbox.moe/uu9b93.jpg" alt="Banner"></div></div>
+
+        <div class="title-section"><div class="title-box">🛡️ FLOW×SKY SPIDER</div></div>
+
+        <div class="profile-card">
+            <div class="profile-top">
+                <div class="profile-info">
+                    <div class="profile-avatar" id="profile-avatar-container">
+                        <img src="https://files.catbox.moe/h8cnec.jpg" id="profile-avatar-img" alt="Profile">
+                        <div class="cam-icon" id="change-photo-btn"><i class="fa-solid fa-camera"></i></div>
+                    </div>
+                    <div class="profile-details">
+                        <span class="greeting">Hey There, <span id="dash-username">User</span></span>
+                        <span class="email"><span id="dash-email">user@flowxsky.com</span> <i class="fa-solid fa-circle-check"></i></span>
+                        <span class="member-badge"><i class="fa-solid fa-crown"></i> <span id="dash-role">MEMBER</span></span>
+                    </div>
+                </div>
+                <div class="weather-clock">
+                    <div class="weather-badge"><i class="fa-solid fa-sun" style="color:#d4af37;"></i> 28°C</div>
+                    <div class="clock-badge"><div class="clock-hands"></div></div>
+                    <div class="wib-badges"><span>WIB</span><span>WIB</span></div>
+                </div>
+            </div>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="icon-box green" id="battery-icon"><i class="fa-solid fa-battery-full"></i></div>
+                    <div class="text-box">
+                        <span>DAYA BATERAI</span>
+                        <span id="battery-level">--%</span>
+                        <span style="font-size:8px; color:#888;" id="battery-status">Mendeteksi...</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <div class="icon-box blue" id="network-icon"><i class="fa-solid fa-wifi"></i></div>
+                    <div class="text-box">
+                        <span>JARINGAN</span>
+                        <span id="network-type">Mendeteksi...</span>
+                        <span style="font-size:8px; color:#888;" id="network-status">Status: --</span>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="color:#e63946;"><i class="fa-solid fa-users"></i></div>
+                    <div class="stat-value" id="users-online">1</div>
+                    <div class="stat-label">USERS ONLINE</div>
+                    <div class="stat-badge green"><i class="fa-solid fa-circle" style="font-size:6px;"></i> LIVE</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color:#00e676;"><i class="fa-solid fa-tower-broadcast"></i></div>
+                    <div class="stat-value" id="sender-online">0</div>
+                    <div class="stat-label">SENDER ONLINE</div>
+                    <div class="stat-badge green"><i class="fa-solid fa-circle" style="font-size:6px;"></i> ONLINE</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color:#d4af37;"><i class="fa-solid fa-calendar"></i></div>
+                    <div class="stat-value" style="font-size:13px;" id="expired-date">UNLIMITED</div>
+                    <div class="stat-label">EXPIRED</div>
+                    <div class="stat-badge yellow"><i class="fa-solid fa-clock" style="font-size:6px;"></i> <span id="expired-time">∞</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="quick-actions-header">
+            <div class="qa-title"><i class="fa-solid fa-bolt"></i> QUICK ACTIONS</div>
+            <div class="view-toggle"><span>GRID</span><span class="active">SLIDE</span></div>
+        </div>
+
+        <div class="qa-slider-wrapper" id="qa-slider">
+            <div class="qa-card" onclick="openTabungan()">
+                <div class="qa-top"><div class="qa-icon pink"><i class="fa-solid fa-wallet"></i></div><div class="action-badge">ACTION • 01</div></div>
+                <div class="qa-content"><h3>TABUNGANKU</h3><p>Catatan & Kelola Keuangan Pribadi</p></div>
+                <div class="qa-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+            </div>
+            <div class="qa-card">
+                <div class="qa-top"><div class="qa-icon yellow"><i class="fa-solid fa-bug"></i></div><div class="action-badge yellow">ACTION • 02</div></div>
+                <div class="qa-content"><h3>BUG SENDER</h3><p>WhatsApp Multi-Device Sender Engine</p></div>
+                <div class="qa-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+            </div>
+            <div class="qa-card" onclick="openChatRoom()">
+                <div class="qa-top"><div class="qa-icon orange"><i class="fa-solid fa-comment-dots"></i></div><div class="action-badge orange">ACTION • 03</div></div>
+                <div class="qa-content"><h3>CHAT ROOM</h3><p>Global Communication & Discussion</p></div>
+                <div class="qa-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+            </div>
+            <div class="qa-card">
+                <div class="qa-top"><div class="qa-icon dark"><i class="fa-solid fa-code"></i></div><div class="action-badge dark">ACTION • 04</div></div>
+                <div class="qa-content"><h3>REPO GITHUB</h3><p>GitHub Repo Manager</p></div>
+                <div class="qa-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+            </div>
+            <div class="qa-card">
+                <div class="qa-top"><div class="qa-icon cyan"><i class="fa-solid fa-flask"></i></div><div class="action-badge cyan">ACTION • 05</div></div>
+                <div class="qa-content"><h3>TES FUNC</h3><p>Test Function & Payload Benchmark</p></div>
+                <div class="qa-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+            </div>
+            <div class="qa-card">
+                <div class="qa-top"><div class="qa-icon red"><i class="fa-solid fa-file-pdf"></i></div><div class="action-badge red">ACTION • 06</div></div>
+                <div class="qa-content"><h3>PLANNER PDF SUITE</h3><p>Photo to PDF Converter & 16 PDF Tools</p></div>
+                <div class="qa-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+            </div>
+            <div class="qa-card" onclick="openAssistant()">
+                <div class="qa-top"><div class="qa-icon purple"><i class="fa-solid fa-robot"></i></div><div class="action-badge purple">ACTION • 07</div></div>
+                <div class="qa-content"><h3>FLOW ASSISTANT</h3><p>AI Chat, Coding Helper, & Smart Assistant</p></div>
+                <div class="qa-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+            </div>
+        </div>
+
+        <div class="slider-dots" id="slider-dots">
+            <span class="active"></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+
+        <div class="prayer-card">
+            <div class="prayer-header">
+                <div class="title"><i class="fa-solid fa-mosque"></i> JADWAL SHOLAT</div>
+                <div class="next-info">Next: Dzuhur in 02:26:31</div>
+            </div>
+            <div class="prayer-grid">
+                <div class="prayer-item"><div class="p-icon"><i class="fa-solid fa-cloud-moon"></i></div><div class="p-name">Subuh</div><div class="p-time">04:32</div></div>
+                <div class="prayer-item active"><div class="p-icon"><i class="fa-solid fa-sun"></i></div><div class="p-name">Dzuhur</div><div class="p-time">12:08</div></div>
+                <div class="prayer-item"><div class="p-icon"><i class="fa-solid fa-cloud-sun"></i></div><div class="p-name">Ashar</div><div class="p-time">15:30</div></div>
+                <div class="prayer-item"><div class="p-icon"><i class="fa-solid fa-cloud-moon"></i></div><div class="p-name">Maghrib</div><div class="p-time">18:20</div></div>
+                <div class="prayer-item"><div class="p-icon"><i class="fa-solid fa-moon"></i></div><div class="p-name">Isya</div><div class="p-time">19:33</div></div>
+            </div>
+        </div>
+
+        <div class="news-header">
+            <div class="title"><i class="fa-solid fa-newspaper"></i> LATEST NEWS</div>
+            <div class="all-btn">All News <i class="fa-solid fa-chevron-right" style="font-size:8px;"></i></div>
+        </div>
+        <div class="news-grid">
+            <div class="news-card">
+                <img src="https://files.catbox.moe/lol1tu.jpg" alt="News">
+                <div class="news-overlay" id="news-1-desc">Update Sistem...</div>
+            </div>
+            <div class="news-card">
+                <img src="https://files.catbox.moe/tgqm4c.jpg" alt="News">
+                <div class="news-overlay" id="news-2-desc">Owner: @FadliFLOW</div>
+            </div>
+        </div>
+
+        <div class="crew-card">
+            <div class="crew-header">
+                <i class="fa-solid fa-spa"></i> FLOW×SKY GORE CREW
+            </div>
+            <div class="crew-grid">
+                <div class="crew-item">
+                    <div class="crew-icon pink"><i class="fa-solid fa-code"></i></div>
+                    <div class="crew-name">Developer</div>
+                    <div class="crew-username">@Nizam</div>
+                    <div class="crew-badge lead">LEAD CODER</div>
+                </div>
+                <a href="https://t.me/FadliFLOW" target="_blank" class="crew-item">
+                    <div class="crew-icon yellow"><i class="fa-solid fa-crown"></i></div>
+                    <div class="crew-name">Pemilik</div>
+                    <div class="crew-username">@Fadli</div>
+                    <div class="crew-badge founder">FOUNDER</div>
+                </a>
+                <a href="https://tiktok.com/@fadlinizam12" target="_blank" class="crew-item">
+                    <div class="crew-icon red"><i class="fa-brands fa-tiktok"></i></div>
+                    <div class="crew-name">TikTok</div>
+                    <div class="crew-username">@fadlinizam12</div>
+                    <div class="crew-badge media">MEDIA HUB</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- LOGOUT BUTTON -->
+        <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
+
+        <div class="bottom-nav">
+            <div class="nav-item active"><i class="fa-solid fa-house"></i><span>Beranda</span></div>
+            <div class="nav-item"><i class="fa-solid fa-user-shield"></i><span>Monitor WA</span></div>
+            <div class="nav-item"><i class="fa-solid fa-users"></i><span>WA Menu</span></div>
+            <div class="nav-item"><i class="fa-solid fa-bug"></i><span>Bug Group</span></div>
+            <div class="nav-item"><i class="fa-solid fa-tools"></i><span>Tools</span></div>
+        </div>
+    </div>
+
+    <!-- SUB-PAGE: TABUNGAN (CELENGAN STYLE) -->
+    <div class="subpage" id="tabungan-page">
+        <div id="celengan-list-view">
+            <div class="subpage-header">
+                <button class="back-btn" onclick="closeTabungan()"><i class="fa-solid fa-arrow-left"></i></button>
+                <div class="title">CELENGANKU</div>
+            </div>
+            <div class="celengan-title">Celenganku</div>
+            <div class="celengan-tabs">
+                <div class="celengan-tab active" onclick="switchTabCelengan('berlangsung', this)">Berlangsung</div>
+                <div class="celengan-tab" onclick="switchTabCelengan('tercapai', this)">Tercapai</div>
+            </div>
+            <div class="celengan-filters">
+                <div class="celengan-filter"><i class="fa-solid fa-list"></i> Nama Tabungan <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="celengan-filter"><i class="fa-solid fa-arrow-up-short-wide"></i> Meningkat <i class="fa-solid fa-chevron-down"></i></div>
+            </div>
+            <div class="celengan-empty">
+                <i class="fa-solid fa-receipt"></i>
+                <p>Tidak ada data untuk ditampilkan.</p>
+            </div>
+            <button class="btn-tambah-celengan" onclick="showAddCelenganForm()">
+                <i class="fa-solid fa-plus"></i> Tambah Celengan
+            </button>
+        </div>
+
+        <!-- FORM TAMBAH CELENGAN -->
+        <div id="celengan-form-view" style="display:none; flex-direction:column; height:100%;">
+            <div class="celengan-form-header">
+                <button class="btn-back" onclick="hideAddCelenganForm()"><i class="fa-solid fa-arrow-left"></i></button>
+                <button class="btn-save" onclick="saveCelengan()">Simpan</button>
+            </div>
+            <div class="celengan-form-body">
+                <div class="upload-image-box" onclick="document.getElementById('celengan-image').click()">
+                    <i class="fa-solid fa-image"></i>
+                    <input type="file" id="celengan-image" accept="image/*">
+                </div>
+                <div class="form-row">
+                    <div class="form-icon"><i class="fa-solid fa-align-left"></i></div>
+                    <input type="text" class="form-input" id="celengan-nama" placeholder="Nama Tabungan">
+                </div>
+                <div class="form-row">
+                    <div class="form-icon"><i class="fa-solid fa-money-bill"></i></div>
+                    <input type="number" class="form-input" id="celengan-target" placeholder="Target Tabungan">
+                </div>
+                <div class="form-row">
+                    <div class="form-icon">🇮🇩</div>
+                    <select class="form-input" id="celengan-mata-uang">
+                        <option value="IDR">Indonesia Rupiah ( Rp )</option>
+                    </select>
+                </div>
+                <div class="form-section-title">Rencana Pengisian</div>
+                <div class="pengisian-tabs">
+                    <div class="pengisian-tab active" onclick="switchPengisian('harian', this)">Harian</div>
+                    <div class="pengisian-tab" onclick="switchPengisian('mingguan', this)">Mingguan</div>
+                    <div class="pengisian-tab" onclick="switchPengisian('bulanan', this)">Bulanan</div>
+                </div>
+                <div class="nominal-row">
+                    <input type="number" id="celengan-nominal" placeholder="Nominal Pengisian">
+                    <button onclick="hitungKalkulator()"><i class="fa-solid fa-calculator"></i></button>
+                </div>
+                <div class="kalkulator-link">
+                    <a href="#" onclick="hitungKalkulator(); return false;">Masih bingung mengisi rencana pengisian?</a><br>
+                    <a href="#" onclick="hitungKalkulator(); return false;">Hitung Dengan Kalkulator Target</a>
+                </div>
+                <div class="form-section-title">Notifikasi</div>
+                <div class="notif-row">
+                    <div class="notif-time">12:00 <i class="fa-solid fa-pencil"></i></div>
+                    <div class="toggle-switch active" id="notif-toggle" onclick="this.classList.toggle('active')"></div>
+                </div>
+                <div class="hari-container">
+                    <button class="hari-btn" onclick="toggleHari(this)">Minggu</button>
+                    <button class="hari-btn" onclick="toggleHari(this)">Senin</button>
+                    <button class="hari-btn" onclick="toggleHari(this)">Selasa</button>
+                    <button class="hari-btn" onclick="toggleHari(this)">Rabu</button>
+                    <button class="hari-btn" onclick="toggleHari(this)">Kamis</button>
+                    <button class="hari-btn" onclick="toggleHari(this)">Jumat</button>
+                    <button class="hari-btn" onclick="toggleHari(this)">Sabtu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUB-PAGE: CHAT ROOM -->
+    <div class="subpage" id="chat-page">
+        <div class="subpage-header">
+            <button class="back-btn" onclick="closeChatRoom()"><i class="fa-solid fa-arrow-left"></i></button>
+            <div class="title">GLOBAL CHAT</div>
+        </div>
+        <div class="mute-warning" id="mute-warning">
+            ⚠️ Anda di-mute selama <span id="mute-countdown">60</span> detik karena melanggar aturan!
+        </div>
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Ketik pesan...">
+                <button id="chat-send-btn" onclick="sendChat()"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUB-PAGE: FLOW ASSISTANT -->
+    <div class="subpage" id="assistant-page">
+        <div class="subpage-header">
+            <button class="back-btn" onclick="closeAssistant()"><i class="fa-solid fa-arrow-left"></i></button>
+            <div class="title">FLOW ASSISTANT</div>
+        </div>
+        <div class="chat-container">
+            <div class="assistant-messages" id="assistant-messages"></div>
+            <div class="assistant-input-container">
+                <input type="text" id="assistant-input" placeholder="Tanya apa saja...">
+                <button id="assistant-send-btn" onclick="sendAssistant()"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, push, onValue, set, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCx7pjTtAwSq7IwWnK5RVDXzncWiKIu7xI",
+        authDomain: "flow-df7c5.firebaseapp.com",
+        databaseURL: "https://flow-df7c5-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "flow-df7c5",
+        storageBucket: "flow-df7c5.firebasestorage.app",
+        messagingSenderId: "649246483377",
+        appId: "1:649246483377:web:c4220d4cb5adb2a9649390"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window.db = db;
+    window.ref = ref;
+    window.push = push;
+    window.onValue = onValue;
+    window.set = set;
+    window.get = get;
+    window.update = update;
+
+    console.log("Firebase initialized ✅");
+</script>
+
+<script>
+    // =========================================================
+    // CONFIG & STATE
+    // =========================================================
+    const DEFAULT_AVATAR = "https://files.catbox.moe/h8cnec.jpg";
+    
+    // API AI (GANTI DENGAN API KEY LU!)
+    // Daftar gratis di: https://aistudio.google.com/app/apikey
+    const GEMINI_API_KEY = "ISI_API_KEY_GEMINI_LU_DISINI";
+    const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+
+    const VALID_USERS = [
+        { username: 'Fadli', password: '123', email: 'fadli@flowxsky.com', role: 'OWNER', expired: 'UNLIMITED' }
+    ];
+
+    let currentUser = null;
+
+    // Load user dari localStorage
+    const savedUser = localStorage.getItem('flowxsky_user');
+    if (savedUser) {
+        try {
+            currentUser = JSON.parse(savedUser);
+        } catch(e) { currentUser = null; }
+    }
+
+    // Load saved avatar dari localStorage
+    const savedAvatar = localStorage.getItem('flowxsky_avatar_' + (currentUser ? currentUser.username : 'guest'));
+    if (savedAvatar) {
+        document.getElementById('profile-avatar-img').src = savedAvatar;
+        document.getElementById('header-avatar-btn').querySelector('img').src = savedAvatar;
+    }
+
+    // =========================================================
+    // UPDATE LOG
+    // =========================================================
+    const UPDATE_LOG = [
+        "Menambahkan Flow Assistant AI",
+        "Fix chat scroll & keyboard",
+        "Tabungan gaya Celengan",
+        "Register akun ke Firebase",
+        "Semua data tersimpan di device"
+    ];
+    document.getElementById('news-1-desc').innerText = UPDATE_LOG[0] || 'Update Sistem';
+
+    // =========================================================
+    // FINGERPRINT
+    // =========================================================
+    const verificationScreen = document.getElementById('verification-screen');
+    const fingerprintBtn = document.getElementById('fingerprint-btn');
+    const progressCircle = document.getElementById('progress-circle');
+    const instructionText = document.getElementById('instruction-text');
+    const instructionLabel = document.getElementById('instruction-label');
+    let holdTimer = null, progress = 0;
+    const HOLD_DURATION = 1500, INTERVAL = 30, MAX_DASH = 565;
+
+    function resetFingerprint() {
+        if (holdTimer) clearInterval(holdTimer);
+        holdTimer = null; progress = 0;
+        progressCircle.style.strokeDashoffset = MAX_DASH;
+        instructionText.className = 'instruction-text';
+        instructionLabel.innerText = 'TAHAN SIDIK JARI UNTUK VERIFIKASI';
+        instructionText.querySelector('i').className = 'fa-solid fa-fingerprint';
+    }
+
+    function onFingerprintSuccess() {
+        if (holdTimer) clearInterval(holdTimer);
+        holdTimer = null;
+        instructionText.className = 'instruction-text success';
+        instructionLabel.innerText = 'VERIFIKASI BERHASIL';
+        instructionText.querySelector('i').className = 'fa-solid fa-check-circle';
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        setTimeout(() => {
+            verificationScreen.classList.add('fade-out');
+            setTimeout(() => {
+                verificationScreen.style.display = 'none';
+                sliderContainer.classList.add('show');
+                void sliderContainer.offsetWidth;
+                sliderContainer.classList.add('fade-in');
+                updateSlide(1);
+            }, 500);
+        }, 300);
+    }
+
+    function startHold(e) {
+        e.preventDefault();
+        if (holdTimer !== null) return;
+        instructionText.className = 'instruction-text holding';
+        instructionLabel.innerText = 'MEMPROSES... TAHAN TERUS';
+        instructionText.querySelector('i').className = 'fa-solid fa-spinner fa-spin';
+        holdTimer = setInterval(() => {
+            progress += (INTERVAL / HOLD_DURATION) * 100;
+            if (progress >= 100) { progress = 100; onFingerprintSuccess(); }
+            const offset = MAX_DASH - (progress / 100) * MAX_DASH;
+            progressCircle.style.strokeDashoffset = offset;
+        }, INTERVAL);
+    }
+
+    function endHold(e) {
+        if (e) e.preventDefault();
+        if (holdTimer !== null) {
+            clearInterval(holdTimer); holdTimer = null;
+            if (progress > 0 && progress < 100) {
+                if (navigator.vibrate) navigator.vibrate(200);
+                instructionText.className = 'instruction-text fail';
+                instructionLabel.innerText = 'DIBATALKAN! ULANGI DARI AWAL';
+                instructionText.querySelector('i').className = 'fa-solid fa-times-circle';
+                setTimeout(resetFingerprint, 1000);
+            } else if (progress === 0) { resetFingerprint(); }
+        }
+    }
+
+    fingerprintBtn.addEventListener('mousedown', startHold);
+    fingerprintBtn.addEventListener('touchstart', startHold, {passive: false});
+    fingerprintBtn.addEventListener('mouseup', endHold);
+    fingerprintBtn.addEventListener('mouseleave', endHold);
+    fingerprintBtn.addEventListener('touchend', endHold);
+    fingerprintBtn.addEventListener('touchcancel', endHold);
+
+    // =========================================================
+    // SLIDER
+    // =========================================================
+    let currentSlide = 0;
+    const totalSlides = 4;
+    const sliderContainer = document.getElementById('slider-container');
+    const slideWrapper = document.getElementById('slide-wrapper');
+    const dots = document.querySelectorAll('#pagination-dots span');
+    const btnNext = document.getElementById('btn-next');
+
+    function updateSlide(index) {
+        currentSlide = index;
+        const translateX = -((index - 1) * 25);
+        slideWrapper.style.transform = `translateX(${translateX}%)`;
+        dots.forEach((dot, i) => {
+            if (i === index - 1) dot.classList.add('active');
+            else dot.classList.remove('active');
+        });
+        if (index === 1) { btnNext.setAttribute('data-theme', 'merah'); btnNext.innerHTML = 'LANJUTKAN <i class="fa-solid fa-arrow-right"></i>'; }
+        else if (index === 2) { btnNext.setAttribute('data-theme', 'oranye'); btnNext.innerHTML = 'LANJUTKAN <i class="fa-solid fa-arrow-right"></i>'; }
+        else if (index === 3) { btnNext.setAttribute('data-theme', 'kuning'); btnNext.innerHTML = 'LANJUTKAN <i class="fa-solid fa-arrow-right"></i>'; }
+        else if (index === 4) { btnNext.setAttribute('data-theme', 'biru'); btnNext.innerHTML = 'SIGN IN <i class="fa-solid fa-right-to-bracket"></i>'; }
+    }
+
+    btnNext.addEventListener('click', () => {
+        if (currentSlide < totalSlides) updateSlide(currentSlide + 1);
+        else openLoginPage();
+    });
+
+    let touchStartX = 0, touchEndX = 0;
+    sliderContainer.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
+    sliderContainer.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        const swipeThreshold = 50;
+        if (touchStartX - touchEndX > swipeThreshold) { if (currentSlide < totalSlides) updateSlide(currentSlide + 1); }
+        if (touchEndX - touchStartX > swipeThreshold) { if (currentSlide > 1) updateSlide(currentSlide - 1); }
+    }, {passive: true});
+
+    // =========================================================
+    // LOGIN
+    // =========================================================
+    const loginScreen = document.getElementById('login-screen');
+    const registerScreen = document.getElementById('register-screen');
+    const btnBackSlide = document.getElementById('btn-back-slide');
+    const togglePassword = document.getElementById('toggle-password');
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = togglePassword.querySelector('i');
+    const loginForm = document.getElementById('login-form');
+    const btnSignin = document.getElementById('btn-signin');
+    const dashboardScreen = document.getElementById('dashboard-screen');
+    const splashScreen = document.getElementById('splash-screen');
+    const splashVideo = document.getElementById('splash-video');
+    const btnSkip = document.getElementById('btn-skip');
+
+    function openLoginPage() {
+        sliderContainer.style.opacity = '0';
+        setTimeout(() => {
+            sliderContainer.style.display = 'none';
+            loginScreen.style.display = 'flex';
+            void loginScreen.offsetWidth;
+            loginScreen.classList.add('show');
+            setTimeout(() => document.getElementById('username').focus(), 400);
+        }, 400);
+    }
+
+    btnBackSlide.addEventListener('click', () => {
+        loginScreen.classList.remove('show');
+        setTimeout(() => {
+            loginScreen.style.display = 'none';
+            sliderContainer.style.display = 'flex';
+            void sliderContainer.offsetWidth;
+            sliderContainer.classList.add('fade-in');
+            sliderContainer.style.opacity = '1';
+        }, 400);
+    });
+
+    togglePassword.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        eyeIcon.className = type === 'text' ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+    });
+
+    // GO TO REGISTER
+    document.getElementById('go-register').addEventListener('click', () => {
+        loginScreen.classList.remove('show');
+        setTimeout(() => {
+            loginScreen.style.display = 'none';
+            registerScreen.style.display = 'flex';
+            void registerScreen.offsetWidth;
+            registerScreen.classList.add('show');
+        }, 400);
+    });
+
+    // GO TO LOGIN
+    document.getElementById('go-login').addEventListener('click', () => {
+        registerScreen.classList.remove('show');
+        setTimeout(() => {
+            registerScreen.style.display = 'none';
+            loginScreen.style.display = 'flex';
+            void loginScreen.offsetWidth;
+            loginScreen.classList.add('show');
+        }, 400);
+    });
+
+    document.getElementById('btn-back-login').addEventListener('click', () => {
+        registerScreen.classList.remove('show');
+        setTimeout(() => {
+            registerScreen.style.display = 'none';
+            loginScreen.style.display = 'flex';
+            void loginScreen.offsetWidth;
+            loginScreen.classList.add('show');
+        }, 400);
+    });
+
+    // LOGIN SUBMIT (Firebase + Local)
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const usernameInput = document.getElementById('username').value.trim();
+        const passwordInputVal = passwordInput.value.trim();
+        if (!usernameInput || !passwordInputVal) { alert('Username dan Password wajib diisi!'); return; }
+
+        btnSignin.classList.add('loading');
+        btnSignin.disabled = true;
+
+        // Cek di Firebase dulu
+        let foundUser = null;
+        try {
+            const userRef = window.ref(window.db, 'users/' + usernameInput.toLowerCase());
+            const snapshot = await window.get(userRef);
+            if (snapshot.exists()) {
+                const userData = snapshot.val();
+                if (userData.password === passwordInputVal) {
+                    foundUser = {
+                        username: userData.username,
+                        password: userData.password,
+                        email: userData.email || '',
+                        role: userData.role || 'MEMBER',
+                        expired: userData.expired || 'UNLIMITED'
+                    };
+                }
+            }
+        } catch(err) { console.log('Firebase error:', err); }
+
+        // Fallback ke local
+        if (!foundUser) {
+            foundUser = VALID_USERS.find(u => 
+                u.username.toLowerCase() === usernameInput.toLowerCase() && u.password === passwordInputVal
+            );
+        }
+
+        btnSignin.classList.remove('loading');
+        btnSignin.disabled = false;
+
+        if (!foundUser) {
+            if (navigator.vibrate) navigator.vibrate(300);
+            alert('LOGIN GAGAL!\n\nUsername atau Password salah.');
+            return;
+        }
+
+        currentUser = foundUser;
+        localStorage.setItem('flowxsky_user', JSON.stringify(foundUser));
+        loginScreen.classList.remove('show');
+        setTimeout(() => {
+            loginScreen.style.display = 'none';
+            playSplashAndEnter(foundUser);
+        }, 400);
+    });
+
+    // REGISTER SUBMIT
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const regUsername = document.getElementById('reg-username').value.trim();
+        const regPassword = document.getElementById('reg-password').value.trim();
+        const regEmail = document.getElementById('reg-email').value.trim();
+
+        // Validasi
+        if (regUsername.length < 3 || regUsername.length > 10) {
+            alert('Username harus 3-10 huruf!');
+            return;
+        }
+        if (regPassword.length < 3 || regPassword.length > 10) {
+            alert('Password harus 3-10 huruf!');
+            return;
+        }
+
+        const btnReg = document.getElementById('btn-register');
+        btnReg.classList.add('loading');
+        btnReg.disabled = true;
+
+        try {
+            // Cek apakah username sudah ada
+            const userRef = window.ref(window.db, 'users/' + regUsername.toLowerCase());
+            const snapshot = await window.get(userRef);
+            if (snapshot.exists()) {
+                alert('Username sudah terdaftar! Gunakan username lain.');
+                btnReg.classList.remove('loading');
+                btnReg.disabled = false;
+                return;
+            }
+
+            // Simpan ke Firebase
+            await window.set(userRef, {
+                username: regUsername,
+                password: regPassword,
+                email: regEmail || regUsername + '@flowxsky.com',
+                role: 'MEMBER',
+                expired: 'UNLIMITED',
+                createdAt: Date.now()
+            });
+
+            btnReg.classList.remove('loading');
+            btnReg.disabled = false;
+            alert('Registrasi berhasil! Silakan login.');
+            
+            // Auto isi login form
+            document.getElementById('username').value = regUsername;
+            document.getElementById('password').value = regPassword;
+            
+            // Pindah ke login
+            registerScreen.classList.remove('show');
+            setTimeout(() => {
+                registerScreen.style.display = 'none';
+                loginScreen.style.display = 'flex';
+                void loginScreen.offsetWidth;
+                loginScreen.classList.add('show');
+            }, 400);
+
+        } catch(err) {
+            console.error(err);
+            btnReg.classList.remove('loading');
+            btnReg.disabled = false;
+            alert('Registrasi gagal: ' + err.message);
+        }
+    });
+
+    // TOGGLE REGISTER PASSWORD
+    document.getElementById('toggle-reg-password').addEventListener('click', () => {
+        const pwd = document.getElementById('reg-password');
+        const eye = document.querySelector('#toggle-reg-password i');
+        const type = pwd.getAttribute('type') === 'password' ? 'text' : 'password';
+        pwd.setAttribute('type', type);
+        eye.className = type === 'text' ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+    });
+
+    // SPLASH
+    function playSplashAndEnter(user) {
+        splashScreen.classList.add('show');
+        splashVideo.currentTime = 0;
+        splashVideo.muted = false;
+        splashVideo.play().catch(() => { splashVideo.muted = true; splashVideo.play(); });
+        let splashTimer = setTimeout(() => { endSplashAndEnter(user); }, 7000);
+        btnSkip.onclick = () => { clearTimeout(splashTimer); endSplashAndEnter(user); };
+    }
+
+    function endSplashAndEnter(user) {
+        splashVideo.pause();
+        splashScreen.style.opacity = '0';
+        setTimeout(() => {
+            splashScreen.style.display = 'none';
+            dashboardScreen.classList.add('show');
+            renderUserData(user);
+            startAutoDetect();
+            updateClockHands();
+        }, 500);
+    }
+
+    function renderUserData(user) {
+        document.getElementById('dash-username').innerText = user.username;
+        document.getElementById('dash-email').innerText = user.email || user.username + '@flowxsky.com';
+        document.getElementById('dash-role').innerText = user.role;
+        document.getElementById('expired-date').innerText = user.expired;
+        document.getElementById('expired-time').innerText = user.expired === 'UNLIMITED' ? '∞' : '19:15';
+        
+        // Load avatar
+        const savedAvatar = localStorage.getItem('flowxsky_avatar_' + user.username);
+        if (savedAvatar) {
+            document.getElementById('profile-avatar-img').src = savedAvatar;
+        }
+    }
+
+    // LOGOUT
+    window.logout = function() {
+        if (confirm('Yakin mau logout?')) {
+            localStorage.removeItem('flowxsky_user');
+            currentUser = null;
+            dashboardScreen.classList.remove('show');
+            setTimeout(() => {
+                dashboardScreen.style.display = 'none';
+                loginScreen.style.display = 'flex';
+                void loginScreen.offsetWidth;
+                loginScreen.classList.add('show');
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+            }, 400);
+        }
+    };
+
+    // AUTO DETECT
+    function startAutoDetect() {
+        if ('getBattery' in navigator) {
+            navigator.getBattery().then(battery => {
+                function updateBattery() {
+                    const level = Math.round(battery.level * 100);
+                    const charging = battery.charging;
+                    document.getElementById('battery-level').innerText = level + '%';
+                    document.getElementById('battery-status').innerText = charging ? 'Sedang Mengisi Daya ⚡' : 'Tidak Mengisi Daya';
+                    const iconBox = document.getElementById('battery-icon');
+                    const icon = iconBox.querySelector('i');
+                    if (charging) { iconBox.className = 'icon-box green'; icon.className = 'fa-solid fa-battery-full'; }
+                    else if (level > 50) { iconBox.className = 'icon-box green'; icon.className = 'fa-solid fa-battery-three-quarters'; }
+                    else if (level > 20) { iconBox.className = 'icon-box blue'; icon.className = 'fa-solid fa-battery-half'; }
+                    else { iconBox.className = 'icon-box red'; icon.className = 'fa-solid fa-battery-quarter'; }
+                }
+                updateBattery();
+                battery.addEventListener('levelchange', updateBattery);
+                battery.addEventListener('chargingchange', updateBattery);
+            });
+        }
+
+        function updateNetwork() {
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            let type = 'Offline', status = 'Tidak Terhubung';
+            let iconClass = 'fa-solid fa-wifi', boxClass = 'icon-box blue';
+            if (navigator.onLine) {
+                if (conn) {
+                    const effectiveType = (conn.effectiveType || '').toLowerCase();
+                    const typeConn = (conn.type || '').toLowerCase();
+                    if (typeConn === 'wifi' || typeConn === 'ethernet') {
+                        type = 'Wi-Fi'; status = 'Terhubung';
+                        iconClass = 'fa-solid fa-wifi'; boxClass = 'icon-box blue';
+                    } else if (typeConn === 'cellular') {
+                        type = 'Data Seluler'; status = 'Terhubung (' + effectiveType.toUpperCase() + ')';
+                        iconClass = 'fa-solid fa-signal'; boxClass = 'icon-box green';
+                    } else {
+                        if (effectiveType.includes('4g') || effectiveType.includes('3g') || effectiveType.includes('2g')) {
+                            type = 'Data Seluler'; status = 'Terhubung (' + effectiveType.toUpperCase() + ')';
+                            iconClass = 'fa-solid fa-signal'; boxClass = 'icon-box green';
+                        } else {
+                            type = 'Wi-Fi'; status = 'Terhubung';
+                            iconClass = 'fa-solid fa-wifi'; boxClass = 'icon-box blue';
+                        }
+                    }
+                } else {
+                    type = 'Wi-Fi'; status = 'Terhubung';
+                    iconClass = 'fa-solid fa-wifi'; boxClass = 'icon-box blue';
+                }
+            } else {
+                type = 'Offline'; status = 'Tidak Terhubung';
+                iconClass = 'fa-solid fa-plane'; boxClass = 'icon-box red';
+            }
+            document.getElementById('network-type').innerText = type;
+            document.getElementById('network-status').innerText = 'Status: ' + status;
+            const networkIconBox = document.getElementById('network-icon');
+            networkIconBox.className = boxClass;
+            networkIconBox.querySelector('i').className = iconClass;
+        }
+        updateNetwork();
+        window.addEventListener('online', updateNetwork);
+        window.addEventListener('offline', updateNetwork);
+        if (navigator.connection) navigator.connection.addEventListener('change', updateNetwork);
+    }
+
+    function updateClockHands() {
+        const now = new Date();
+        const hours = now.getHours() % 12;
+        const minutes = now.getMinutes();
+        const hourDeg = (hours * 30) + (minutes * 0.5);
+        const minDeg = minutes * 6;
+        const clockHands = document.querySelector('.clock-hands');
+        if (clockHands) {
+            clockHands.style.setProperty('--hour-deg', hourDeg + 'deg');
+            clockHands.style.setProperty('--min-deg', minDeg + 'deg');
+        }
+    }
+    setInterval(updateClockHands, 60000);
+
+    // =========================================================
+    // PROFILE PHOTO (Tersimpan di localStorage)
+    // =========================================================
+    document.getElementById('change-photo-btn').addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const dataUrl = ev.target.result;
+                document.getElementById('profile-avatar-img').src = dataUrl;
+                if (currentUser) {
+                    localStorage.setItem('flowxsky_avatar_' + currentUser.username, dataUrl);
+                }
+                alert('Foto profile berhasil diganti & tersimpan!');
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
+    });
+
+    // =========================================================
+    // TABUNGAN (CELENGAN STYLE)
+    // =========================================================
+    const tabunganPage = document.getElementById('tabungan-page');
+    let celenganImageData = null;
+    let currentPengisian = 'harian';
+
+    window.openTabungan = function() {
+        tabunganPage.classList.add('show');
+        loadCelenganFromFirebase();
+    }
+    window.closeTabungan = function() {
+        tabunganPage.classList.remove('show');
+    }
+    window.showAddCelenganForm = function() {
+        document.getElementById('celengan-list-view').style.display = 'none';
+        document.getElementById('celengan-form-view').style.display = 'flex';
+    }
+    window.hideAddCelenganForm = function() {
+        document.getElementById('celengan-form-view').style.display = 'none';
+        document.getElementById('celengan-list-view').style.display = 'block';
+        resetCelenganForm();
+    }
+    window.switchTabCelengan = function(tab, el) {
+        document.querySelectorAll('.celengan-tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+        loadCelenganFromFirebase();
+    }
+    window.switchPengisian = function(type, el) {
+        document.querySelectorAll('.pengisian-tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+        currentPengisian = type;
+    }
+    window.toggleHari = function(el) {
+        el.classList.toggle('active');
+    }
+    window.hitungKalkulator = function() {
+        const target = parseFloat(document.getElementById('celengan-target').value);
+        const nominal = parseFloat(document.getElementById('celengan-nominal').value);
+        if (!target || !nominal) { alert('Isi target dan nominal dulu!'); return; }
+        let periode = 0;
+        if (currentPengisian === 'harian') periode = Math.ceil(target / nominal);
+        else if (currentPengisian === 'mingguan') periode = Math.ceil(target / nominal);
+        else if (currentPengisian === 'bulanan') periode = Math.ceil(target / nominal);
+        alert(`Dengan ${currentPengisian} Rp ${nominal.toLocaleString('id-ID')}, kamu butuh ${periode} ${currentPengisian} untuk mencapai target Rp ${target.toLocaleString('id-ID')}.`);
+    }
+    window.saveCelengan = async function() {
+        const nama = document.getElementById('celengan-nama').value.trim();
+        const target = parseFloat(document.getElementById('celengan-target').value);
+        const nominal = parseFloat(document.getElementById('celengan-nominal').value);
+        const hari = [];
+        document.querySelectorAll('.hari-btn.active').forEach(b => hari.push(b.innerText));
+        const notifAktif = document.getElementById('notif-toggle').classList.contains('active');
+
+        if (!nama || !target) { alert('Nama dan Target wajib diisi!'); return; }
+
+        const data = {
+            nama, target, nominal, periode: currentPengisian, hari, notifAktif,
+            image: celenganImageData,
+            current: 0,
+            createdAt: Date.now()
+        };
+
+        if (currentUser) {
+            const celenganRef = window.ref(window.db, 'celengan/' + currentUser.username);
+            const newRef = window.push(celenganRef);
+            await window.set(newRef, data);
+        }
+        
+        // Simpan juga di localStorage
+        const key = 'flowxsky_celengan_' + (currentUser ? currentUser.username : 'guest');
+        const saved = JSON.parse(localStorage.getItem(key) || '[]');
+        saved.push(data);
+        localStorage.setItem(key, JSON.stringify(saved));
+
+        alert('Celengan berhasil disimpan!');
+        hideAddCelenganForm();
+        loadCelenganFromFirebase();
+    }
+
+    function resetCelenganForm() {
+        document.getElementById('celengan-nama').value = '';
+        document.getElementById('celengan-target').value = '';
+        document.getElementById('celengan-nominal').value = '';
+        celenganImageData = null;
+        document.querySelector('.upload-image-box').innerHTML = '<i class="fa-solid fa-image"></i><input type="file" id="celengan-image" accept="image/*">';
+        attachCelenganImageListener();
+    }
+
+    function attachCelenganImageListener() {
+        const input = document.getElementById('celengan-image');
+        if (!input) return;
+        input.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                celenganImageData = ev.target.result;
+                const box = document.querySelector('.upload-image-box');
+                box.innerHTML = `<img src="${celenganImageData}" alt="Preview"><input type="file" id="celengan-image" accept="image/*">`;
+                attachCelenganImageListener();
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    attachCelenganImageListener();
+
+    function loadCelenganFromFirebase() {
+        if (!currentUser) return;
+        const celenganRef = window.ref(window.db, 'celengan/' + currentUser.username);
+        window.onValue(celenganRef, (snapshot) => {
+            const data = snapshot.val();
+            renderCelengan(data ? Object.values(data) : []);
+        });
+    }
+
+    function renderCelengan(items) {
+        // Untuk sekarang, karena di screenshot ada empty state
+        // Kita tampilkan empty state jika gak ada data
+        if (!items || items.length === 0) {
+            // Empty state
+            return;
+        }
+        // Bisa dikembangkan lebih lanjut
+    }
+
+    // =========================================================
+    // CHAT ROOM
+    // =========================================================
+    const chatPage = document.getElementById('chat-page');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const chatSendBtn = document.getElementById('chat-send-btn');
+    const muteWarning = document.getElementById('mute-warning');
+    const muteCountdown = document.getElementById('mute-countdown');
+
+    const TOXIC_WORDS = ['anjing', 'bangsat', 'kontol', 'memek', 'babi', 'peler', 'goblok', 'tolol', 'idiot', 'kampret', 'sialan'];
+    const PROMO_WORDS = ['jual', 'beli', 'promo', 'diskon', 'murah', 'wa aku', 'dm aku', 'hubungi', 'order'];
+    
+    let isMuted = false;
+
+    window.openChatRoom = function() {
+        chatPage.classList.add('show');
+        loadChatFromFirebase();
+        // Fix keyboard scroll
+        setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 300);
+    }
+    window.closeChatRoom = function() {
+        chatPage.classList.remove('show');
+    }
+
+    function loadChatFromFirebase() {
+        if (!window.db) return;
+        const chatRef = window.ref(window.db, 'global_chat');
+        window.onValue(chatRef, (snapshot) => {
+            chatMessages.innerHTML = '';
+            const data = snapshot.val();
+            if (!data) {
+                chatMessages.innerHTML = '<p style="color:#666;text-align:center;font-size:12px;padding:20px;">Belum ada pesan. Jadilah yang pertama!</p>';
+                return;
+            }
+            const messages = Object.values(data).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+            messages.forEach(msg => renderChatMessage(msg));
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    }
+
+    function renderChatMessage(msg) {
+        const isOwn = currentUser && msg.username === currentUser.username;
+        const div = document.createElement('div');
+        div.className = 'chat-message' + (isOwn ? ' own' : '');
+        
+        const avatarContent = msg.photo ? `<img src="${msg.photo}" alt="">` : `<i class="fa-solid fa-user"></i>`;
+        
+        div.innerHTML = `
+            <div class="msg-avatar">${avatarContent}</div>
+            <div class="msg-content">
+                <div class="msg-name">
+                    ${msg.username || 'Anonim'}
+                    ${msg.role ? `<span class="role-badge">${msg.role}</span>` : ''}
+                </div>
+                <div class="msg-text">${escapeHtml(msg.text || '')}</div>
+                <div class="msg-time">${msg.time || ''}</div>
+            </div>
+        `;
+        chatMessages.appendChild(div);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    window.sendChat = function() {
+        const text = chatInput.value.trim();
+        if (!text) return;
+        if (isMuted) { alert('Anda sedang di-mute! Tunggu hingga waktu habis.'); return; }
+        if (!currentUser) { alert('Login dulu!'); return; }
+
+        const lowerText = text.toLowerCase();
+        const isToxic = TOXIC_WORDS.some(w => lowerText.includes(w));
+        const isPromo = PROMO_WORDS.some(w => lowerText.includes(w));
+
+        if (isToxic || isPromo) {
+            muteUser(isToxic ? 'kata toxic' : 'promosi');
+            return;
+        }
+
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        
+        const chatRef = window.ref(window.db, 'global_chat');
+        window.push(chatRef, {
+            username: currentUser.username,
+            role: currentUser.role,
+            photo: document.getElementById('profile-avatar-img').src,
+            text: text,
+            time: timeStr,
+            timestamp: Date.now()
+        });
+
+        chatInput.value = '';
+    }
+
+    function muteUser(reason) {
+        isMuted = true;
+        chatInput.disabled = true;
+        chatSendBtn.disabled = true;
+        muteWarning.classList.add('show');
+        
+        let seconds = 60;
+        muteCountdown.innerText = seconds;
+        
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        
+        const muteTimer = setInterval(() => {
+            seconds--;
+            muteCountdown.innerText = seconds;
+            if (seconds <= 0) {
+                clearInterval(muteTimer);
+                isMuted = false;
+                chatInput.disabled = false;
+                chatSendBtn.disabled = false;
+                muteWarning.classList.remove('show');
+            }
+        }, 1000);
+    }
+
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendChat();
+    });
+
+    // FIX KEYBOARD SCROLL
+    chatInput.addEventListener('focus', () => {
+        setTimeout(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 300);
+    });
+
+    // =========================================================
+    // FLOW ASSISTANT (AI)
+    // =========================================================
+    const assistantPage = document.getElementById('assistant-page');
+    const assistantMessages = document.getElementById('assistant-messages');
+    const assistantInput = document.getElementById('assistant-input');
+    
+    let assistantHistory = [];
+
+    window.openAssistant = function() {
+        assistantPage.classList.add('show');
+        if (assistantMessages.children.length === 0) {
+            addAssistantMessage('bot', 'Halo! Aku FLOW Assistant 🤖\n\nAku bisa bantu kamu:\n• Menjawab pertanyaan\n• Bantu coding\n• Menjelaskan konsep\n• Dan banyak lagi!\n\nTanya apa aja ya!');
+        }
+    }
+    window.closeAssistant = function() {
+        assistantPage.classList.remove('show');
+    }
+
+    function addAssistantMessage(sender, text) {
+        const div = document.createElement('div');
+        div.className = 'assistant-msg ' + sender;
+        
+        // Detect code block
+        const parts = text.split(/```/);
+        let html = '';
+        parts.forEach((part, i) => {
+            if (i % 2 === 1) {
+                // Code block
+                const cleanCode = part.replace(/^[a-z]+\n/, '');
+                html += `<pre><button class="copy-btn" onclick="copyCode(this)">COPY</button>${escapeHtml(cleanCode)}</pre>`;
+            } else {
+                html += escapeHtml(part);
+            }
+        });
+        
+        div.innerHTML = html;
+        assistantMessages.appendChild(div);
+        assistantMessages.scrollTop = assistantMessages.scrollHeight;
+    }
+
+    window.copyCode = function(btn) {
+        const code = btn.parentElement.innerText.replace('COPY', '').trim();
+        navigator.clipboard.writeText(code).then(() => {
+            btn.innerText = 'COPIED!';
+            setTimeout(() => btn.innerText = 'COPY', 1500);
+        });
+    }
+
+    function showTypingIndicator() {
+        const div = document.createElement('div');
+        div.className = 'typing-indicator';
+        div.id = 'typing-indicator';
+        div.innerHTML = '<span></span><span></span><span></span>';
+        assistantMessages.appendChild(div);
+        assistantMessages.scrollTop = assistantMessages.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+        const el = document.getElementById('typing-indicator');
+        if (el) el.remove();
+    }
+
+    window.sendAssistant = async function() {
+        const text = assistantInput.value.trim();
+        if (!text) return;
+
+        addAssistantMessage('user', text);
+        assistantInput.value = '';
+        assistantHistory.push({ role: 'user', parts: [{ text: text }] });
+
+        showTypingIndicator();
+
+        try {
+            if (GEMINI_API_KEY === "ISI_API_KEY_GEMINI_LU_DISINI") {
+                // Fallback response kalau API key belum diisi
+                setTimeout(() => {
+                    removeTypingIndicator();
+                    addAssistantMessage('bot', '⚠️ API Key belum diisi!\n\nSilakan daftar gratis di:\nhttps://aistudio.google.com/app/apikey\n\nLalu ganti GEMINI_API_KEY di kode.');
+                }, 1000);
+                return;
+            }
+
+            const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: assistantHistory,
+                    systemInstruction: {
+                        parts: [{ text: "Kamu adalah FLOW Assistant, AI yang membantu coding, menjawab pertanyaan, dan asisten pintar. Jawab dengan ramah dan jelas dalam Bahasa Indonesia. Kalau ada kode, gunakan format markdown ```language ... ``` biar bisa di-copy." }]
+                    }
+                })
+            });
+
+            const data = await response.json();
+            removeTypingIndicator();
+
+            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                const botText = data.candidates[0].content.parts[0].text;
+                addAssistantMessage('bot', botText);
+                assistantHistory.push({ role: 'model', parts: [{ text: botText }] });
+            } else {
+                addAssistantMessage('bot', '❌ Maaf, terjadi error. Coba lagi ya.');
+            }
+
+        } catch(err) {
+            removeTypingIndicator();
+            addAssistantMessage('bot', '❌ Error: ' + err.message);
+        }
+    }
+
+    assistantInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendAssistant();
+    });
+
+    // =========================================================
+    // SLIDER DOTS QA
+    // =========================================================
+    const qaSlider = document.getElementById('qa-slider');
+    const sliderDots = document.querySelectorAll('#slider-dots span');
+    qaSlider.addEventListener('scroll', () => {
+        const scrollLeft = qaSlider.scrollLeft;
+        const cardWidth = qaSlider.querySelector('.qa-card').offsetWidth + 15;
+        const activeIndex = Math.round(scrollLeft / cardWidth);
+        sliderDots.forEach((dot, i) => {
+            if (i === activeIndex) dot.classList.add('active');
+            else dot.classList.remove('active');
+        });
+    });
+
+    // =========================================================
+    // NAV ACTIVE
+    // =========================================================
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            item.classList.add('active');
+        });
+    });
+</script>
+
+</body>
+</html>
